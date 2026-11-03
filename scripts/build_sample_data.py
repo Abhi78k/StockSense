@@ -1,6 +1,6 @@
 """Refresh the bundled offline datasets in data/.
 
-Usage:  python build_sample_data.py
+Usage:  python scripts/build_sample_data.py
 
 Downloads daily history from Yahoo Finance. If a download fails (for example,
 with no internet), a realistic synthetic series is written instead, so the app
@@ -19,7 +19,7 @@ TICKERS = {
     "RELIANCE.NS": 450.0, "TCS.NS": 1100.0,
 }
 START = dt.date(2016, 1, 1)
-OUT = Path(__file__).parent / "data"
+OUT = Path(__file__).resolve().parent.parent / "data"
 
 
 def download(ticker: str) -> pd.DataFrame:
@@ -28,7 +28,9 @@ def download(ticker: str) -> pd.DataFrame:
     df = yf.Ticker(ticker).history(start=START, end=dt.date.today() + dt.timedelta(days=1), auto_adjust=True)
     if df.empty:
         raise ValueError("empty response")
-    df.index = pd.to_datetime(df.index).tz_convert(None).normalize()
+    # tz_localize(None) keeps the exchange's local date; tz_convert(None) would
+    # shift to UTC first and move e.g. NSE dates one day earlier.
+    df.index = pd.to_datetime(df.index).tz_localize(None).normalize()
     return df[["Open", "High", "Low", "Close", "Volume"]]
 
 
